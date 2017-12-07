@@ -4,10 +4,15 @@ from flask import request
 
 import requests
 import hashlib
+import redis
+
 
 
 
 app = Flask(__name__)
+
+cache = redis.StrictRedis(host = "redis" , port = 6379 , db = 0)
+
 default_name = "Musa"
 salt = "UNIQUE_SALT"
 
@@ -50,8 +55,22 @@ def get_identicon(name):
 
 
     # requests a web app written in node to return image.
-    r = requests.get("http://dnmonster:8080/monster/" + name + "?size=80")
-    image = r.content
+
+    image = cache.get(name)
+
+    # if the name is new , that generate a new image for the name,
+    # else use the fucking cache for to get the old image for the
+    # name.
+
+
+    if image is None:
+
+
+        print("Cache miss " , flush = True)
+        r = requests.get("http://dnmonster:8080/monster/" + name + "?size=80")
+        image = r.content
+        cache.set(name , image)
+
 
     return Response(image , mimetype = "image/png")
 
